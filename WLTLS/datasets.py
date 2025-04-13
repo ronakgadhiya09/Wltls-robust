@@ -150,7 +150,7 @@ class datasets:
     LSHTC1 =        DatasetParams(  "LSHTC1",           5,        False,        1199856)
     imageNet =      DatasetParams(  "imageNet",         1,        False,        1000)
     Dmoz =          DatasetParams(  "Dmoz",             7,        False,        833484)
-    bibtex =        DatasetParams(  "bibtex",           7,        True,        1836)
+    # bibtex =        DatasetParams(  "bibtex",           7,        True,        1836)
     
     @staticmethod
     def getParams(datasetName):
