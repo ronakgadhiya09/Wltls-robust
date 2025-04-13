@@ -59,7 +59,15 @@ parser.add_argument("-binary_classifier", choices=[LEARNER_AROW, LEARNER_PERCEPT
 parser.add_argument("--plot_graph", dest='show_graph', action='store_true', help="Plot the trellis graph on start")
 parser.add_argument("--sparse", dest='try_sparse', action='store_true',
                     help="Experiment sparse models at the end of training")
-parser.set_defaults(show_graph=False)
+parser.add_argument("--explain", dest='explain_predictions', action='store_true',
+                    help="Generate path-based explanations for predictions")
+parser.add_argument("--robustness", dest='check_robustness', action='store_true',
+                    help="Perform robustness analysis on predictions")
+parser.add_argument("--epsilon", type=float, default=0.1,
+                    help="Epsilon value for robustness analysis perturbations")
+parser.add_argument("--top_k", type=int, default=5,
+                    help="Number of top paths to analyze for explanations")
+parser.set_defaults(show_graph=False, explain_predictions=False, check_robustness=False)
 
 args = parser.parse_args()
 
@@ -145,15 +153,6 @@ print("The final model was tested in {} and achieved {:.1f}% accuracy.".format(
     Timing.secondsToString(result["time"]), result["accuracy"]
 ))
 
-
-
-# scores_file = "/content/sector_scores.txt"
-# result = finalModel.test(Xtest, Ytest, scores_file=scores_file)
-# print("The final model was tested in {} and achieved {:.1f}% accuracy.".format(
-#     Timing.secondsToString(result["time"]), result["accuracy"]
-# ))
-
-
 print("Generating LIME perturbations")
 Xtest_dense = Xtest.toarray()
 sample_id = 0
@@ -230,6 +229,78 @@ feature_names=[f"Feature_{i}" for i in range(X_perturbed.shape[1])]
 lime_df = pd.DataFrame(feature_importance, columns=feature_names)
 
 lime_df.to_csv(output_path, index=False)
+
+printSeparator()
+
+# Add explainability and robustness analysis
+if args.explain_predictions or args.check_robustness:
+    print("\nPerforming detailed analysis on test predictions...")
+    
+    # Sample a subset of test instances for detailed analysis
+    num_samples = min(100, len(Xtest))  # Analyze up to 100 samples
+    sample_indices = np.random.choice(len(Xtest), num_samples, replace=False)
+    
+    results = {
+        'explanations': [],
+        'robustness': []
+    }
+    
+    for idx in sample_indices:
+        x = Xtest[idx]
+        y_true = Ytest[idx]
+        
+        if args.explain_predictions:
+            explanation = finalModel.explain_prediction(x, k=args.top_k)
+            results['explanations'].append({
+                'sample_idx': idx,
+                'true_label': y_true,
+                'explanation': explanation
+            })
+        
+        if args.check_robustness:
+            robustness = finalModel.get_robustness_score(x, epsilon=args.epsilon)
+            results['robustness'].append({
+                'sample_idx': idx,
+                'true_label': y_true,
+                'robustness_score': robustness['stability_score'],
+                'predicted_label': robustness['original_prediction']
+            })
+    
+    # Save analysis results
+    if args.explain_predictions:
+        exp_file = os.path.join(args.model_dir, "explanations.txt")
+        with open(exp_file, 'w') as f:
+            f.write("Path-based Explanations Analysis\n")
+            f.write("=" * 50 + "\n\n")
+            
+            for result in results['explanations']:
+                f.write(f"Sample {result['sample_idx']} (True label: {result['true_label']})\n")
+                for pred in result['explanation']:
+                    f.write(f"  Rank {pred['rank']}: Label {pred['predicted_label']} (Score: {pred['path_score']:.4f})\n")
+                    f.write("  Top features:\n")
+                    for feat_idx, importance in pred['important_features']:
+                        f.write(f"    Feature {feat_idx}: {importance:.4f}\n")
+                f.write("\n")
+        print(f"\nExplanations saved to: {exp_file}")
+    
+    if args.check_robustness:
+        rob_file = os.path.join(args.model_dir, "robustness.txt")
+        with open(rob_file, 'w') as f:
+            f.write("Robustness Analysis Results\n")
+            f.write("=" * 50 + "\n\n")
+            
+            total_stability = 0
+            for result in results['robustness']:
+                f.write(f"Sample {result['sample_idx']}:\n")
+                f.write(f"  True label: {result['true_label']}\n")
+                f.write(f"  Predicted: {result['predicted_label']}\n")
+                f.write(f"  Stability score: {result['robustness_score']:.4f}\n\n")
+                total_stability += result['robustness_score']
+            
+            avg_stability = total_stability / len(results['robustness'])
+            f.write(f"\nOverall average stability score: {avg_stability:.4f}")
+        
+        print(f"Robustness analysis saved to: {rob_file}")
 
 printSeparator()
 

@@ -103,3 +103,53 @@ class FinalModel:
             "y_predicted": Ypredicted,
             "all_scores": all_scores 
         }
+
+    def explain_prediction(self, x, k=5):
+        """Explain a prediction by analyzing top k paths and their feature importance"""
+        # Get responses from predictors
+        responses = x.dot(self.W).ravel()
+        
+        # Get feature weights (can be adjusted based on model type)
+        feature_weights = np.abs(self.W)
+        feature_weights = feature_weights / np.sum(feature_weights, axis=0)
+        
+        # Find k best codes with their feature importance
+        codes, importances = self.decoder.findKBestCodesWithImportance(responses, feature_weights, k)
+        
+        explanations = []
+        for i, (code, importance) in enumerate(zip(codes, importances)):
+            label = self.codeManager.codeToLabel(code)
+            # Get top influential features
+            top_features = np.argsort(importance)[-10:]  # Top 10 features
+            
+            explanations.append({
+                'rank': i + 1,
+                'predicted_label': label,
+                'path_score': sum(responses * code),
+                'important_features': list(zip(top_features, importance[top_features]))
+            })
+            
+        return explanations
+    
+    def get_robustness_score(self, x, epsilon=0.1):
+        """Calculate prediction robustness by analyzing path stability under perturbation"""
+        responses = x.dot(self.W).ravel()
+        original_code = self.decoder.findKBestCodes(responses, 1)[0]
+        
+        # Generate perturbations
+        perturbations = np.random.normal(0, epsilon, size=(10, len(x)))
+        perturbed_predictions = []
+        
+        for perturb in perturbations:
+            perturbed_x = x + perturb
+            perturbed_responses = perturbed_x.dot(self.W).ravel()
+            perturbed_code = self.decoder.findKBestCodes(perturbed_responses, 1)[0]
+            perturbed_predictions.append(perturbed_code)
+        
+        # Calculate stability score (% of perturbations that yield same prediction)
+        stability = sum(np.array_equal(original_code, p) for p in perturbed_predictions) / len(perturbations)
+        
+        return {
+            'stability_score': stability,
+            'original_prediction': self.codeManager.codeToLabel(original_code)
+        }

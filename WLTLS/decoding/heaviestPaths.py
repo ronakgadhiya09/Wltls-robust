@@ -95,6 +95,34 @@ class HeaviestPaths():
 
         return [self._pathToCode(path) for path in paths]
 
+    def findKBestCodesWithImportance(self, responses, feature_weights, k:int=1):
+        """Find k best codes and track feature importance along paths"""
+        W = self.prepareWeights(responses)
+        
+        # Get k best paths
+        parents = DAG_k_heaviest_path_lengths(self._DAG.G, W, self._DAG.source, 
+                                            k=k, topologicalSort=self._topologicalSort)
+        
+        paths = restorePathsFromParents(parents, k, self._DAG.source, self._DAG.sink, W)
+        
+        codes = []
+        importances = []
+        
+        for path in paths:
+            code = self._pathToCode(path)
+            codes.append(code)
+            
+            # Calculate feature importance along this path
+            path_importance = np.zeros(len(feature_weights))
+            for edge in path:
+                edge_idx = self._edgeIndices[edge]
+                # Weight features by their influence on this edge
+                path_importance += feature_weights * W[edge]
+            
+            importances.append(path_importance)
+            
+        return codes, importances
+
     def edges(self):
         return self._edges
 
