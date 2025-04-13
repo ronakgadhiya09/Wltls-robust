@@ -5,13 +5,18 @@ from graphs import TrellisGraph
 import argparse
 import warnings
 import numpy as np
+from sklearn.preprocessing import OneHotEncoder
+import pandas as pd
 from WLTLS.mainModels import WltlsModel
 from WLTLS.learners import AveragedPerceptron, AROW
 from aux_lib import Timing
 from WLTLS.codeManager import GreedyCodeManager, RandomCodeManager
 from WLTLS.datasets import datasets
 from WLTLS.experiment import Experiment
+from scipy.sparse import csr_matrix
 import os
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import StandardScaler
 
 # Const choices
 LEARNER_AROW = "AROW"
@@ -139,6 +144,92 @@ result = finalModel.test(Xtest, Ytest, save_scores=True, scores_file=scores_file
 print("The final model was tested in {} and achieved {:.1f}% accuracy.".format(
     Timing.secondsToString(result["time"]), result["accuracy"]
 ))
+
+
+
+# scores_file = "/content/sector_scores.txt"
+# result = finalModel.test(Xtest, Ytest, scores_file=scores_file)
+# print("The final model was tested in {} and achieved {:.1f}% accuracy.".format(
+#     Timing.secondsToString(result["time"]), result["accuracy"]
+# ))
+
+
+print("Generating LIME perturbations")
+Xtest_dense = Xtest.toarray()
+sample_id = 0
+x0 = Xtest_dense[sample_id]
+y0 = Ytest[sample_id]  # confidence vector for the sample
+
+predicted_class = np.argmax(y0)
+
+# Step 2: Perturbations
+num_perturbations = 500
+noise_std = 0.03
+perturbations = np.random.normal(loc=0.0, scale=noise_std, size=(num_perturbations, Xtest_dense.shape[1]))
+X_perturbed = x0 + perturbations
+X_perturbed_sparse = csr_matrix(X_perturbed)
+
+# generate output
+y_temp = Ytest
+y_perturbed_sparse = csr_matrix(y_temp[:num_perturbations])
+
+print("Generated perturbations")
+print("Now second predict by model")
+scores_file = "/content/lime_output.txt"
+result = finalModel.test(X_perturbed_sparse, y_perturbed_sparse, scores_file=scores_file)
+
+
+#One Hot Encoded results for perturbations
+
+lime_out = pd.read_csv("/content/lime_output.txt", sep=r'\s+', engine='python')
+lime_out = lime_out.drop(lime_out.columns[0], axis=1)  # Drop ID/index column
+
+lime_np = lime_out.to_numpy()
+
+class_indices = np.argmax(lime_np, axis=1)       # Shape: (n_samples,)
+scores = np.max(lime_np, axis=1)                 # Shape: (n_samples,)
+
+encoder = OneHotEncoder(categories=[np.arange(105)], handle_unknown='ignore', sparse_output=False)
+encoder.fit(np.arange(105).reshape(-1, 1))
+
+y_from_perturbed = encoder.transform(class_indices.reshape(-1, 1))
+
+print('Computing rbf similarity')
+def compute_similarity(original_instance, perturbed_samples, kernel_width=0.85):
+    # Computes similarity scores using the RBF kernel (LIME-style)
+    distances = np.linalg.norm(perturbed_samples - original_instance, axis=1)
+    weights = np.exp(- (distances ** 2) / (2 * kernel_width ** 2))
+    return weights
+
+# Compute similarity weights
+weights = compute_similarity(x0, X_perturbed)
+
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_perturbed)
+print('Fit LIME regression models')
+# Step 2: Fit multi-output Ridge regression
+from sklearn.linear_model import Ridge
+import numpy as np
+
+def fit_local_model(X_perturbed, Y, weights):
+    n_classes = Y.shape[1]
+    coef_matrix = []
+
+    for class_idx in range(n_classes):
+        ridge = Ridge(alpha=1.0)
+        ridge.fit(X_perturbed, Y[:, class_idx], sample_weight=weights)
+        coef_matrix.append(ridge.coef_)
+
+    return np.array(coef_matrix)
+
+output_path = '/content/explainations.csv'
+feature_importance = fit_local_model(X_perturbed, y_from_perturbed, weights)
+n_classes = feature_importance.shape[0]
+feature_names=[f"Feature_{i}" for i in range(X_perturbed.shape[1])]
+lime_df = pd.DataFrame(feature_importance, columns=feature_names)
+
+lime_df.to_csv(output_path, index=False)
 
 printSeparator()
 
