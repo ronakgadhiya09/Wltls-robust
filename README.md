@@ -134,6 +134,55 @@ See the example in `example_compute_assignments.py`.
 
 More details can be found in Section 4.2 and Appendix F in Evron et al. (2023).
 
+## Explainability
+
+WLTLS now includes perturbation-based explainability that helps understand model predictions by analyzing how features influence prediction scores. To enable explainability, use the `--explain` flag:
+
+```
+python wltls.py <dataset> <data_path> <model_dir> --explain
+```
+
+### Perturbation-Based Explainability
+
+The explainability approach uses a feature perturbation technique that:
+
+1. **Measures Feature Impact**: Systematically zeros out individual features to measure their impact on prediction scores
+2. **Identifies Feature Importance**: Calculates importance scores based on how much each feature affects the prediction  
+3. **Determines Effect Direction**: Shows whether features increase (+) or decrease (-) prediction scores
+4. **Calculates Prediction Stability**: Measures how stable predictions are under small random perturbations
+
+### Example Output
+
+```
+Sample 123 (True label: 5)
+  Rank 1: Label 5 (Score: 12.4567)
+  Confidence: 78.23%
+  Stability: 92.00%
+  Top features:
+    Feature 42: 0.3542 +
+    Feature 17: 0.2361 +
+    Feature 88: 0.1279 -
+    Feature 105: 0.0854 +
+```
+
+In this example:
+- Feature 42 is the most important feature and increases the prediction score
+- Feature 88 decreases the prediction score (negative effect)
+- The prediction is highly stable (92%) under small perturbations
+
+### Visualizing Explanations
+
+Use the provided `example_compute_explanations.py` script to generate detailed explanations with visualizations:
+
+```
+python example_compute_explanations.py <dataset> <data_path> <model_dir> --visualize
+```
+
+This generates:
+- Feature importance bar charts with color-coded direction effects
+- Confidence score visualizations for top predictions
+- Stability score distributions across samples
+
 ## Citation
 
 1. If you use our code, please cite:  
@@ -159,7 +208,6 @@ Evron, Onn, Weiss Orzech, Azeroual, and Soudry. [**The Role of Codeword-to-Class
       organization={PMLR}
     }
     ```
-
 
 ## Contact
 

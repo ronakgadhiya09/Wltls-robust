@@ -142,7 +142,7 @@ class GreedyCodeManager(CodeManager):
         super().__init__(LABELS, allCodes)
 
     def _initMappings(self):
-        self._codeIdxToLabel = np.ones((self.LABELS,), dtype=np.int) * self._NO_LABEL
+        self._codeIdxToLabel = np.ones((self.LABELS,), dtype=int) * self._NO_LABEL
         self._labelToCodeIdx = [None] * self.LABELS
 
     @staticmethod
