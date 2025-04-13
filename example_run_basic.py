@@ -119,11 +119,14 @@ printSeparator()
 finalModel = FinalModel(DIMS, mainModel, codeManager, heaviestPaths)
 del mainModel
 
-result = finalModel.test(Xtest, Ytest)
+# Save scores in the dataset directory
+scores_file = os.path.join(DATA_PATH, DATASET_NAME.lower() + "_class_scores.txt")
+result = finalModel.test(Xtest, Ytest, save_scores=True, scores_file=scores_file)
 
 print_debug("The final model was tested in {} and achieved {:.1f}% accuracy.".format(
     Timing.secondsToString(result["time"]), result["accuracy"]
 ))
+print_debug("Class confidence scores have been saved to: {}".format(scores_file))
 
 printSeparator()
 

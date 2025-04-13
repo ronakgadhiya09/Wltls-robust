@@ -132,7 +132,9 @@ printSeparator()
 finalModel = FinalModel(DIMS, mainModel, codeManager, heaviestPaths)
 del mainModel
 
-result = finalModel.test(Xtest, Ytest)
+# Use fixed path for scores file
+scores_file = "/content/sector_scores.txt"
+result = finalModel.test(Xtest, Ytest, save_scores=True, scores_file=scores_file)
 
 print("The final model was tested in {} and achieved {:.1f}% accuracy.".format(
     Timing.secondsToString(result["time"]), result["accuracy"]
