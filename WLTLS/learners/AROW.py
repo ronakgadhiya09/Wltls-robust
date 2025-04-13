@@ -59,6 +59,8 @@ class AROW(Learner):
                 self.step_size = 4
 
             # Update means and covariance
+            if self.step_size is None:
+                self.step_size = 1.0  # default fallback
             self.mean[x.indices] += self.step_size * alpha_i * y * covG
             self.covariance[x.indices] -= beta_i * np.power(covG, 2) # Taking only the diagonal
 

@@ -139,7 +139,10 @@ class Experiment():
                     #
                     # A better way would be to save the data of the binary learners (e.g. means of AROW),
                     # and the coding matrix and allocation, one by one, and then load them with a special method.
+                    import os
+                    os.makedirs(os.path.dirname(modelLogPath), exist_ok=True)
                     np.savez(modelLogPath, ltls=self._model)
+
                     print("Saved model ({}).".format(tSave.get_elapsed_time()), end='', flush=True)
                     del tSave
 

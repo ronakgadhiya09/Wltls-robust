@@ -127,7 +127,7 @@ def read_full(path, dataset, printSummary = True):
             t.get_elapsed_time(), LABELS, DIMS, effectiveDim,
             len(Ytrain), len(Yvalid), len(Ytest)))
 
-    return Xtrain, Ytrain.astype(np.int), Xvalid, Yvalid.astype(np.int), Xtest, Ytest.astype(np.int), LABELS, DIMS, le
+    return Xtrain, Ytrain.astype(int), Xvalid, Yvalid.astype(int), Xtest, Ytest.astype(int), LABELS, DIMS, le
 
 
 class DatasetParams:
@@ -150,7 +150,8 @@ class datasets:
     LSHTC1 =        DatasetParams(  "LSHTC1",           5,        False,        1199856)
     imageNet =      DatasetParams(  "imageNet",         1,        False,        1000)
     Dmoz =          DatasetParams(  "Dmoz",             7,        False,        833484)
-
+    bibtex =        DatasetParams(  "bibtex",           7,        True,        1836)
+    
     @staticmethod
     def getParams(datasetName):
         return getattr(datasets, datasetName.replace(".", "_"))

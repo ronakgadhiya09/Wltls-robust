@@ -18,7 +18,7 @@ def DAG_k_heaviest_path_lengths(G, W, s, k=1, topologicalSort = None):
     if topologicalSort is None:
         topologicalSort = list(nx.topological_sort(G))
 
-    lengths = {v: [(-np.infty, None)] for v in topologicalSort}
+    lengths = {v: [(-np.inf, None)] for v in topologicalSort}
 
     # We sort at every iteration instead of using sorted list because apparently it's faster
     # Every list should be saved sorted
@@ -44,7 +44,7 @@ def DAG_heaviest_path_lengths(G, W, s, topologicalSort = None):
     if topologicalSort is None:
         topologicalSort = list(nx.topological_sort(G))
 
-    lengths = {v: (-np.infty, None) for v in topologicalSort}
+    lengths = {v: (-np.inf, None) for v in topologicalSort}
 
     lengths[s] = (0, None)
 
@@ -55,7 +55,7 @@ def DAG_heaviest_path_lengths(G, W, s, topologicalSort = None):
         if not predecessors:
             continue
 
-        maxVal = (-np.infty, None)
+        maxVal = (-np.inf, None)
         for p in predecessors:
             currLength = lengths[p][0] + W[(p, v)]
 
