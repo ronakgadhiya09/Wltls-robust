@@ -237,8 +237,8 @@ if args.explain_predictions or args.check_robustness:
     print("\nPerforming detailed analysis on test predictions...")
     
     # Sample a subset of test instances for detailed analysis
-    num_samples = min(100, len(Xtest))  # Analyze up to 100 samples
-    sample_indices = np.random.choice(len(Xtest), num_samples, replace=False)
+    num_samples = min(100, Xtest.shape[0])  # Using shape[0] instead of len() for sparse matrix
+    sample_indices = np.random.choice(Xtest.shape[0], num_samples, replace=False)
     
     results = {
         'explanations': [],
@@ -246,7 +246,8 @@ if args.explain_predictions or args.check_robustness:
     }
     
     for idx in sample_indices:
-        x = Xtest[idx]
+        # Convert sparse row to dense array for analysis
+        x = Xtest[idx].toarray().ravel()  # Convert sparse row to dense array
         y_true = Ytest[idx]
         
         if args.explain_predictions:
