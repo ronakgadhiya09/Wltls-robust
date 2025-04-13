@@ -11,6 +11,7 @@ from WLTLS.datasets import datasets
 from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.cluster import AgglomerativeClustering
 from scipy.spatial.distance import squareform, pdist
+import os
 
 
 LINE_WIDTH = 80
@@ -127,6 +128,20 @@ for _ in range(5):
     randoms.append(dist)
 
 print_debug("Mean of 5 random assignments: {:.2e}, Std: {:.2e}".format(np.mean(randoms), np.std(randoms)))
+
+# Save results to a file in the dataset directory
+results_file = os.path.join(DATASET_PATH, "assignment_results.txt")
+with open(results_file, 'w') as f:
+    f.write("Assignment Results for Dataset: {}\n".format(DATASET.name))
+    f.write("=" * 50 + "\n\n")
+    f.write("Similarity-preserving assignment score: {:.2e}\n".format(np.linalg.norm(Dcls - Dcw) ** 2))
+    f.write("\nRandom Assignment Statistics:\n")
+    f.write("Mean score: {:.2e}\n".format(np.mean(randoms)))
+    f.write("Standard deviation: {:.2e}\n".format(np.std(randoms)))
+    f.write("\nFound Assignment:\n")
+    f.write(str(similarityAssignment))
+
+print_debug("Results have been saved to: {}".format(results_file))
 
 
 
